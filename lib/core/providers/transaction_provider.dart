@@ -52,6 +52,16 @@ class TransactionsNotifier extends AsyncNotifier<List<TransactionModel>> {
       // Handle error
     }
   }
+
+  Future<void> updateTransaction(TransactionModel transaction) async {
+    try {
+      final db = await ref.read(databaseProvider.future);
+      await db.update('transactions', transaction.toMap(), where: 'id = ?', whereArgs: [transaction.id]);
+      await loadTransactions();
+    } catch (e) {
+      // Handle error
+    }
+  }
   
     Future<void> deleteTransaction(String id) async {
     try {

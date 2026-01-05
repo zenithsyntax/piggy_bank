@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/debt.dart';
+import '../models/transaction_model.dart';
+import '../models/category.dart';
 import 'database_provider.dart';
 
 final debtsProvider = AsyncNotifierProvider<DebtsNotifier, List<Debt>>(() {
@@ -36,21 +38,84 @@ class DebtsNotifier extends AsyncNotifier<List<Debt>> {
   }) async {
     try {
       final db = await ref.read(databaseProvider.future);
-      final newDebt = Debt(
-        id: const Uuid().v4(),
-        memberId: memberId,
-        personName: personName,
-        amount: amount,
-        type: type,
-        status: DebtStatus.pending,
-        date: date,
-        note: note,
-      );
-      await db.insert('debts', newDebt.toMap());
+      
+      await db.transaction((txn) async {
+        final newDebt = Debt(
+          id: const Uuid().v4(),
+          memberId: memberId,
+          personName: personName,
+          amount: amount,
+          remainingAmount: amount, // Initially same
+          type: type,
+          status: DebtStatus.pending,
+          date: date,
+          note: note,
+        );
+        await txn.insert('debts', newDebt.toMap());
+
+         // Helper to get or create category
+        Future<String> getCategoryId(String name, CategoryType catType) async {
+          final maps = await txn.query(
+            'categories',
+            where: 'name = ? AND type = ?',
+            whereArgs: [name, catType.name],
+          );
+          if (maps.isNotEmpty) {
+            return maps.first['id'] as String;
+          }
+          final newId = const Uuid().v4();
+          await txn.insert('categories', {
+            'id': newId,
+            'name': name,
+            'type': catType.name,
+          });
+          return newId;
+        }
+
+        // Create Linked Transaction
+        // DebtType.debit = I gave (Lent) -> Expense
+        // DebtType.credit = I took (Borrowed) -> Income
+        final transactionType = type == DebtType.debit ? CategoryType.expense : CategoryType.income;
+        final categoryName = type == DebtType.debit ? 'Debt / Loan Given' : 'Debt / Loan Taken';
+        
+        final catId = await getCategoryId(categoryName, transactionType);
+        
+        final newTransaction = TransactionModel(
+          id: const Uuid().v4(),
+          memberId: memberId,
+          categoryId: catId,
+          amount: amount,
+          type: transactionType,
+          date: date,
+          note: 'Debt: $personName - $note',
+        );
+        await txn.insert('transactions', newTransaction.toMap());
+      });
+
       await loadDebts();
     } catch (e) {
       // Handle error
     }
+  }
+  
+  Future<void> updateDebt(Debt debt) async {
+      try {
+          final db = await ref.read(databaseProvider.future);
+          await db.update('debts', debt.toMap(), where: 'id = ?', whereArgs: [debt.id]);
+          await loadDebts();
+      } catch (e) {
+          // Handle Error
+      }
+  }
+
+  Future<void> deleteDebt(String id) async {
+       try {
+          final db = await ref.read(databaseProvider.future);
+          await db.delete('debts', where: 'id = ?', whereArgs: [id]);
+          await loadDebts();
+      } catch (e) {
+          // Handle Error
+      }
   }
 
   Future<void> markAsSettled(String id) async {
@@ -60,13 +125,118 @@ class DebtsNotifier extends AsyncNotifier<List<Debt>> {
       final maps = await db.query('debts', where: 'id = ?', whereArgs: [id]);
       if (maps.isNotEmpty) {
           final debt = Debt.fromMap(maps.first);
-          final updated = debt.copyWith(status: DebtStatus.settled);
+          final updated = debt.copyWith(status: DebtStatus.settled, remainingAmount: 0);
           await db.update('debts', updated.toMap(), where: 'id = ?', whereArgs: [id]);
           await loadDebts();
       }
     } catch (e) {
       // Handle error
     }
+  }
+  
+  Future<void> addRepayment({
+      required String debtId,
+      required double amount,
+      required DateTime date,
+      String note = '',
+  }) async {
+      final db = await ref.read(databaseProvider.future);
+      final debts = state.asData?.value ?? [];
+      final debtIndex = debts.indexWhere((d) => d.id == debtId);
+      if (debtIndex == -1) return;
+      final debt = debts[debtIndex];
+
+      final newRepayment = DebtRepayment(
+          id: const Uuid().v4(),
+          debtId: debtId,
+          amount: amount,
+          date: date,
+          note: note
+      );
+      
+      await db.transaction((txn) async {
+          // 1. Insert Repayment
+          await txn.insert('debt_repayments', newRepayment.toMap());
+          
+           // Helper to get or create category
+            Future<String> getCategoryId(String name, CategoryType catType) async {
+            final maps = await txn.query(
+                'categories',
+                where: 'name = ? AND type = ?',
+                whereArgs: [name, catType.name],
+            );
+            if (maps.isNotEmpty) {
+                return maps.first['id'] as String;
+            }
+            final newId = const Uuid().v4();
+            await txn.insert('categories', {
+                'id': newId,
+                'name': name,
+                'type': catType.name,
+            });
+            return newId;
+            }
+
+            // Create Linked Transaction for Repayment
+            // If Debt was Debit (I gave), Repayment is Income (I get back)
+            // If Debt was Credit (I took), Repayment is Expense (I pay back)
+            
+            final isIncome = debt.type == DebtType.debit;
+            final transactionType = isIncome ? CategoryType.income : CategoryType.expense;
+            final categoryName = isIncome ? 'Debt Repayment Received' : 'Debt Repayment Paid';
+
+            final catId = await getCategoryId(categoryName, transactionType);
+
+            final newTransaction = TransactionModel(
+            id: const Uuid().v4(),
+            memberId: debt.memberId,
+            categoryId: catId,
+            amount: amount,
+            type: transactionType,
+            date: date,
+            note: 'Repayment: ${debt.personName}',
+            );
+            await txn.insert('transactions', newTransaction.toMap());
+          
+          // 2. Update Debt Remaining Amount
+          final newRemaining = debt.remainingAmount - amount;
+          final newStatus = newRemaining <= 0 ? DebtStatus.settled : DebtStatus.pending;
+          
+          final updatedDebt = debt.copyWith(
+              remainingAmount: newRemaining < 0 ? 0 : newRemaining,
+              status: newStatus
+          );
+          await txn.update('debts', updatedDebt.toMap(), where: 'id = ?', whereArgs: [debtId]);
+      });
+      
+      // Reload debts to update UI
+      ref.invalidate(debtRepaymentsProvider(debtId));
+      await loadDebts();
+  }
+  
+  Future<void> deleteRepayment(String repaymentId, String debtId, double amount) async {
+       final db = await ref.read(databaseProvider.future);
+       final debts = state.asData?.value ?? [];
+       final debtIndex = debts.indexWhere((d) => d.id == debtId);
+       if (debtIndex == -1) return;
+       final debt = debts[debtIndex];
+       
+       await db.transaction((txn) async {
+           await txn.delete('debt_repayments', where: 'id = ?', whereArgs: [repaymentId]);
+           
+           // Restore amount to debt
+           final newRemaining = debt.remainingAmount + amount;
+           final newStatus = DebtStatus.pending; // Revert to pending if it was settled
+           
+            final updatedDebt = debt.copyWith(
+              remainingAmount: newRemaining > debt.amount ? debt.amount : newRemaining, // Cap at total amount? Or allow over? usually cap at total.
+              status: newStatus
+          );
+          await txn.update('debts', updatedDebt.toMap(), where: 'id = ?', whereArgs: [debtId]);
+       });
+       
+       ref.invalidate(debtRepaymentsProvider(debtId));
+       await loadDebts();
   }
 }
 
@@ -81,12 +251,12 @@ final memberDebtSummaryProvider = Provider.family<Map<String, double>, String>((
     double credit = 0; // I took
     
     for (var d in debts) {
-        // Only count pending? Usually yes for "current debt"
+        // Only count pending? Usually yes for "current debt" - count Remaining Amount
         if (d.status == DebtStatus.pending) {
             if (d.type == DebtType.debit) {
-                debit += d.amount;
+                debit += d.remainingAmount;
             } else {
-                credit += d.amount;
+                credit += d.remainingAmount;
             }
         }
     }
@@ -94,4 +264,10 @@ final memberDebtSummaryProvider = Provider.family<Map<String, double>, String>((
         'debit': debit,
         'credit': credit,
     };
+});
+
+final debtRepaymentsProvider = FutureProvider.family<List<DebtRepayment>, String>((ref, debtId) async {
+    final db = await ref.watch(databaseProvider.future);
+    final maps = await db.query('debt_repayments', where: 'debt_id = ?', whereArgs: [debtId], orderBy: 'date DESC');
+    return maps.map((e) => DebtRepayment.fromMap(e)).toList();
 });

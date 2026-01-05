@@ -22,9 +22,31 @@ class DatabaseHelper {
     final path = join(documentsDirectory.path, 'piggy_bank.db');
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Add remaining_amount to debts
+      await db.execute('ALTER TABLE debts ADD COLUMN remaining_amount REAL DEFAULT 0');
+      // Initialize remaining_amount = amount for existing records
+      await db.execute('UPDATE debts SET remaining_amount = amount');
+      
+      // Create debt_repayments table
+      await db.execute('''
+        CREATE TABLE debt_repayments (
+          id TEXT PRIMARY KEY,
+          debt_id TEXT NOT NULL,
+          amount REAL NOT NULL,
+          date TEXT NOT NULL,
+          note TEXT,
+          FOREIGN KEY (debt_id) REFERENCES debts (id) ON DELETE CASCADE
+        )
+      ''');
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -68,6 +90,7 @@ class DatabaseHelper {
         member_id TEXT NOT NULL,
         person_name TEXT NOT NULL,
         amount REAL NOT NULL,
+        remaining_amount REAL NOT NULL,
         type TEXT NOT NULL,
         status TEXT NOT NULL,
         date TEXT NOT NULL,
@@ -103,6 +126,18 @@ class DatabaseHelper {
         note TEXT,
         FOREIGN KEY (allowance_id) REFERENCES allowances (id) ON DELETE CASCADE,
          FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE SET NULL
+      )
+    ''');
+
+    // 7. Debt Repayments
+    await db.execute('''
+      CREATE TABLE debt_repayments (
+        id TEXT PRIMARY KEY,
+        debt_id TEXT NOT NULL,
+        amount REAL NOT NULL,
+        date TEXT NOT NULL,
+        note TEXT,
+        FOREIGN KEY (debt_id) REFERENCES debts (id) ON DELETE CASCADE
       )
     ''');
 

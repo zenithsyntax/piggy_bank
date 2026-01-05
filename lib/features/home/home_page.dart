@@ -39,7 +39,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
              // Sync selected member provider
              Future.microtask(() {
                  if(members.isNotEmpty) {
-                    ref.read(selectedMemberProvider.notifier).state = members[_tabController!.index].id;
+                    ref.read(selectedMemberProvider.notifier).setSelected(members[_tabController!.index].id);
                  }
              });
         }
@@ -103,7 +103,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
       if (_tabController!.indexIsChanging) {
           final members = ref.read(familyMembersProvider).asData?.value;
           if (members != null && members.isNotEmpty) {
-               ref.read(selectedMemberProvider.notifier).state = members[_tabController!.index].id;
+               ref.read(selectedMemberProvider.notifier).setSelected(members[_tabController!.index].id);
           }
       }
   }

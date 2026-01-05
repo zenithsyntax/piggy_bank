@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../core/models/transaction_model.dart';
 import '../../core/models/category.dart';
 import '../../core/providers/category_provider.dart';
 import '../../core/providers/transaction_provider.dart';
 
 class TransactionDialog extends ConsumerStatefulWidget {
   final String initialMemberId;
-  const TransactionDialog({super.key, required this.initialMemberId});
+  final TransactionModel? transactionToEdit;
+  
+  const TransactionDialog({super.key, required this.initialMemberId, this.transactionToEdit});
 
   @override
   ConsumerState<TransactionDialog> createState() => _TransactionDialogState();
@@ -24,16 +27,26 @@ class _TransactionDialogState extends ConsumerState<TransactionDialog> {
   @override
   void initState() {
     super.initState();
-    _type = CategoryType.expense;
-    _date = DateTime.now();
+    if (widget.transactionToEdit != null) {
+        final t = widget.transactionToEdit!;
+        _type = t.type;
+        _date = t.date;
+        _amountController.text = t.amount.toString();
+        _noteController.text = t.note;
+        _selectedCategoryId = t.categoryId;
+    } else {
+        _type = CategoryType.expense;
+        _date = DateTime.now();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(categoriesProvider);
-    
+    final isEditing = widget.transactionToEdit != null;
+
     return AlertDialog(
-      title: const Text('Add Transaction'),
+      title: Text(isEditing ? 'Edit Transaction' : 'Add Transaction'),
       content: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -50,7 +63,12 @@ class _TransactionDialogState extends ConsumerState<TransactionDialog> {
                 onSelectionChanged: (Set<CategoryType> newSelection) {
                   setState(() {
                     _type = newSelection.first;
-                    _selectedCategoryId = null; // Reset category on type change
+                    // Reset category on type change unless it matches current edit type 
+                     if (isEditing && _type == widget.transactionToEdit!.type) {
+                         _selectedCategoryId = widget.transactionToEdit!.categoryId;
+                     } else {
+                         _selectedCategoryId = null; 
+                     }
                   });
                 },
               ),
@@ -77,9 +95,12 @@ class _TransactionDialogState extends ConsumerState<TransactionDialog> {
                   if (filtered.isEmpty) {
                       return const Text('No categories found. Go to Settings.');
                   }
-                  // Auto-select first if null (simplified logic compared to requirement "Last used", but good for MVP)
-                  // Requirement said "Category -> Last used". I'll skip "Last used" persistance for now to ensure cleanliness.
                   
+                  // Ensure selected category is valid for current list, else reset
+                  if (_selectedCategoryId != null && !filtered.any((c) => c.id == _selectedCategoryId)) {
+                      _selectedCategoryId = null;
+                  }
+
                   return DropdownButtonFormField<String>(
                     value: _selectedCategoryId,
                     decoration: const InputDecoration(labelText: 'Category'),
@@ -132,14 +153,26 @@ class _TransactionDialogState extends ConsumerState<TransactionDialog> {
 
   void _submit() {
     if (_formKey.currentState!.validate() && _selectedCategoryId != null) {
-      ref.read(transactionsProvider.notifier).addTransaction(
-        memberId: widget.initialMemberId,
-        categoryId: _selectedCategoryId!,
-        amount: double.parse(_amountController.text),
-        type: _type,
-        date: _date,
-        note: _noteController.text,
-      );
+      if (widget.transactionToEdit != null) {
+         final old = widget.transactionToEdit!;
+         final updated = old.copyWith(
+             categoryId: _selectedCategoryId!,
+             amount: double.parse(_amountController.text),
+             type: _type,
+             date: _date,
+             note: _noteController.text,
+         );
+         ref.read(transactionsProvider.notifier).updateTransaction(updated);
+      } else {
+          ref.read(transactionsProvider.notifier).addTransaction(
+            memberId: widget.initialMemberId,
+            categoryId: _selectedCategoryId!,
+            amount: double.parse(_amountController.text),
+            type: _type,
+            date: _date,
+            note: _noteController.text,
+          );
+      }
       Navigator.pop(context);
     }
   }

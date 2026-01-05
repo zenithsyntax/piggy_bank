@@ -114,6 +114,24 @@ class AllowanceExpense extends Equatable {
     );
   }
 
+  AllowanceExpense copyWith({
+    String? id,
+    String? allowanceId,
+    String? categoryId,
+    double? amount,
+    DateTime? date,
+    String? note,
+  }) {
+    return AllowanceExpense(
+      id: id ?? this.id,
+      allowanceId: allowanceId ?? this.allowanceId,
+      categoryId: categoryId ?? this.categoryId,
+      amount: amount ?? this.amount,
+      date: date ?? this.date,
+      note: note ?? this.note,
+    );
+  }
+
   @override
   List<Object?> get props => [id, allowanceId, categoryId, amount, date, note];
 }
