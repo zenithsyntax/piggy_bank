@@ -261,24 +261,37 @@ class _MemberDashboardState extends ConsumerState<MemberDashboard> {
   // --- Widgets Components ---
 
   Widget _buildFilterChip(String label, bool isSelected, VoidCallback onTap) {
-    return FilterChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (_) => onTap(),
-      selectedColor: Theme.of(context).colorScheme.primaryContainer,
-      checkmarkColor: Theme.of(context).colorScheme.primary,
-      labelStyle: TextStyle(
-        color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey,
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: isSelected ? Colors.transparent : Colors.white12,
+    final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.primary;
+    
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(30),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? primaryColor : Colors.white.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(
+              color: isSelected ? primaryColor : Colors.white.withOpacity(0.1),
+              width: 1,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? Colors.white : Colors.white60,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              fontSize: 14,
+            ),
+          ),
         ),
       ),
-      backgroundColor: Colors.black26,
     );
+
   }
 
   Widget _buildEmptyState(String message) {
