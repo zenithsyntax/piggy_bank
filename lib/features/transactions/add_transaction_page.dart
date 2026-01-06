@@ -5,6 +5,7 @@ import '../../core/models/transaction_model.dart';
 import '../../core/models/category.dart';
 import '../../core/providers/category_provider.dart';
 import '../../core/providers/transaction_provider.dart';
+import '../../core/providers/currency_provider.dart';
 
 class AddTransactionPage extends ConsumerStatefulWidget {
   final String initialMemberId;
@@ -53,6 +54,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
 
   @override
   Widget build(BuildContext context) {
+    final currency = ref.watch(currencyProvider).valueOrNull ?? '\$';
     final categoriesAsync = ref.watch(categoriesProvider);
     final isEditing = widget.transactionToEdit != null;
 
@@ -69,16 +71,16 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
             children: [
               // 1. Transaction Type Segmented Button
               SegmentedButton<CategoryType>(
-                segments: const [
+                segments: [
                   ButtonSegment(
                     value: CategoryType.expense,
-                    label: Text('Expense'),
-                    icon: Icon(Icons.money_off),
+                    label: const Text('Expense'),
+                    icon: const Icon(Icons.remove_circle, color: Colors.redAccent),
                   ),
                   ButtonSegment(
                     value: CategoryType.income,
-                    label: Text('Income'),
-                    icon: Icon(Icons.attach_money),
+                    label: const Text('Income'),
+                    icon: const Icon(Icons.add_circle, color: Colors.greenAccent),
                   ),
                 ],
                 selected: {_type},
@@ -107,7 +109,8 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
                   labelText: 'Amount',
-                  prefixIcon: const Icon(Icons.numbers),
+                  prefixText: currency,
+                  prefixStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),

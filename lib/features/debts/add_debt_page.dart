@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../core/models/debt.dart';
 import '../../core/providers/debt_provider.dart';
+import '../../core/providers/currency_provider.dart';
 
 class AddDebtPage extends ConsumerStatefulWidget {
   final String initialMemberId;
@@ -52,6 +53,7 @@ class _AddDebtPageState extends ConsumerState<AddDebtPage> {
 
   @override
   Widget build(BuildContext context) {
+    final currency = ref.watch(currencyProvider).valueOrNull ?? '\$';
     final isEditing = widget.debtToEdit != null;
     return Scaffold(
       appBar: AppBar(
@@ -113,7 +115,8 @@ class _AddDebtPageState extends ConsumerState<AddDebtPage> {
                     const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
                   labelText: 'Total Amount',
-                  prefixIcon: const Icon(Icons.attach_money),
+                  prefixText: currency,
+                  prefixStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),

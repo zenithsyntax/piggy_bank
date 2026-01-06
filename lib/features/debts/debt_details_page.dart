@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../core/models/debt.dart';
 import '../../core/providers/debt_provider.dart';
+import '../../core/utils/summary_card.dart';
 import 'debt_repayment_dialog.dart';
 import 'add_debt_page.dart';
+import '../../core/providers/currency_provider.dart';
 
 class DebtDetailsPage extends ConsumerWidget {
   final Debt debt;
@@ -13,6 +15,7 @@ class DebtDetailsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final currency = ref.watch(currencyProvider).valueOrNull ?? '\$';
     final debtsList = ref.watch(debtsProvider).asData?.value ?? [];
     // Get updated debt object
     final currentDebt = debtsList.firstWhere(
@@ -61,7 +64,7 @@ class DebtDetailsPage extends ConsumerWidget {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                           const Text("Remaining (Pending)", style: TextStyle(color: Colors.grey)),
-                                          Text(NumberFormat.simpleCurrency().format(currentDebt.remainingAmount), 
+                                          Text(NumberFormat.currency(symbol: currency).format(currentDebt.remainingAmount), 
                                                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                                                    color: color, fontWeight: FontWeight.bold
                                                )),
@@ -71,7 +74,7 @@ class DebtDetailsPage extends ConsumerWidget {
                                       crossAxisAlignment: CrossAxisAlignment.end,
                                       children: [
                                           const Text("Total Amount", style: TextStyle(color: Colors.grey)),
-                                          Text(NumberFormat.simpleCurrency().format(currentDebt.amount), 
+                                          Text(NumberFormat.currency(symbol: currency).format(currentDebt.amount), 
                                                 style: Theme.of(context).textTheme.titleLarge),
                                       ]
                                   )
@@ -152,7 +155,7 @@ class DebtDetailsPage extends ConsumerWidget {
                                         leading: const CircleAvatar(child: Icon(Icons.check, size: 20)),
                                         title: Text(DateFormat.yMMMd().format(r.date)),
                                         subtitle: r.note.isNotEmpty ? Text(r.note) : null,
-                                        trailing: Text(NumberFormat.simpleCurrency().format(r.amount), 
+                                        trailing: Text(NumberFormat.currency(symbol: currency).format(r.amount), 
                                             style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.greenAccent)),
                                     ),
                                 );

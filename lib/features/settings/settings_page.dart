@@ -5,11 +5,16 @@ import 'pages/categories_page.dart';
 import 'widgets/settings_section.dart';
 import 'widgets/settings_tile.dart';
 
+import '../../core/providers/currency_provider.dart';
+
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final currencyAsyncValue = ref.watch(currencyProvider);
+    final currentCurrency = currencyAsyncValue.valueOrNull ?? '\$';
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: CustomScrollView(
@@ -36,7 +41,8 @@ class SettingsPage extends ConsumerWidget {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const FamilyMembersPage()),
+                      MaterialPageRoute(
+                          builder: (context) => const FamilyMembersPage()),
                     );
                   },
                 ),
@@ -48,15 +54,80 @@ class SettingsPage extends ConsumerWidget {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const CategoriesPage()),
+                      MaterialPageRoute(
+                          builder: (context) => const CategoriesPage()),
                     );
                   },
+                ),
+                SettingsTile(
+                  icon: const Icon(Icons.currency_exchange),
+                  iconColor: Colors.greenAccent,
+                  title: 'Currency',
+                  subtitle: 'Current: $currentCurrency',
+                  onTap: () => _showCurrencySelectionDialog(context, ref),
                 ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  void _showCurrencySelectionDialog(BuildContext context, WidgetRef ref) {
+    final currencies = [
+      '\$', '€', '£', '¥', '₹', '₽', '₩', '₨', '৳', '₪', '﷼', '₦', '฿', 'R',
+      'kr', 'zł', '₫', '₱', '₲', '₴', '₡', '₵', '₸', '₮', '₭', '₺', '₼', '₾',
+      '₿', '¢', '¤', '₣', '₤', '₥', '₧', '₯', '₰', '₳', '₶', '₷', '₻', '৲',
+      '৻', '֏', '؋', '꠸', '៛'
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Select Currency'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: GridView.builder(
+              shrinkWrap: true,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 5,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+              ),
+              itemCount: currencies.length,
+              itemBuilder: (context, index) {
+                final currency = currencies[index];
+                return InkWell(
+                  onTap: () {
+                    ref.read(currencyProvider.notifier).setCurrency(currency);
+                    Navigator.pop(context);
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade800),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      currency,
+                      style: const TextStyle(fontSize: 20),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

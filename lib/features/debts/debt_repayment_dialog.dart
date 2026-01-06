@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../core/models/debt.dart';
 import '../../core/providers/debt_provider.dart';
+import '../../core/providers/currency_provider.dart';
 
 class DebtRepaymentDialog extends ConsumerStatefulWidget {
   final String debtId;
@@ -36,6 +37,7 @@ class _DebtRepaymentDialogState extends ConsumerState<DebtRepaymentDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final currency = ref.watch(currencyProvider).valueOrNull ?? '\$';
     final isDebit = widget.type == DebtType.debit;
     final title = isDebit ? 'Receive Return' : 'Make Repayment';
     final label = isDebit ? 'Amount Received' : 'Amount Paid';
@@ -47,13 +49,17 @@ class _DebtRepaymentDialogState extends ConsumerState<DebtRepaymentDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text("Remaining Balance: ${NumberFormat.simpleCurrency().format(_maxAmount)}", 
+            Text("Remaining Balance: ${NumberFormat.currency(symbol: currency).format(_maxAmount)}", 
                 style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
             const SizedBox(height: 16),
             TextFormField(
               controller: _amountController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(labelText: label),
+              decoration: InputDecoration(
+                labelText: label,
+                prefixText: currency,
+                prefixStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
               validator: (value) {
                 if (value == null || value.isEmpty) return 'Required';
                 final amount = double.tryParse(value);

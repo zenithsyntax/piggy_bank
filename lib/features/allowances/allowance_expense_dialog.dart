@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../core/models/category.dart';
 import '../../core/providers/category_provider.dart';
 import '../../core/providers/allowance_provider.dart';
+import '../../core/providers/currency_provider.dart';
 
 class AllowanceExpenseDialog extends ConsumerStatefulWidget {
   final String allowanceId;
@@ -30,6 +31,7 @@ class _AllowanceExpenseDialogState extends ConsumerState<AllowanceExpenseDialog>
 
   @override
   Widget build(BuildContext context) {
+    final currency = ref.watch(currencyProvider).valueOrNull ?? '\$';
     final categoriesAsync = ref.watch(categoriesProvider);
     
     return AlertDialog(
@@ -40,7 +42,7 @@ class _AllowanceExpenseDialogState extends ConsumerState<AllowanceExpenseDialog>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-               Text('Remaining Allowance: ${NumberFormat.simpleCurrency().format(widget.remainingAmount)}', 
+               Text('Remaining Allowance: ${NumberFormat.currency(symbol: currency).format(widget.remainingAmount)}', 
                     style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.greenAccent)),
                const SizedBox(height: 16),
                
@@ -48,7 +50,11 @@ class _AllowanceExpenseDialogState extends ConsumerState<AllowanceExpenseDialog>
               TextFormField(
                 controller: _amountController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Amount'),
+                decoration: InputDecoration(
+                  labelText: 'Amount',
+                  prefixText: currency,
+                  prefixStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
                 validator: (value) {
                   if (value == null || value.isEmpty) return 'Required';
                   if (double.tryParse(value) == null) return 'Invalid number';

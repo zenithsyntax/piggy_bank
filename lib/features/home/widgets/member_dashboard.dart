@@ -11,6 +11,7 @@ import '../../allowances/allowance_expense_dialog.dart';
 import '../../allowances/allowance_details_page.dart';
 import '../../debts/debt_details_page.dart';
 import '../../transactions/add_transaction_page.dart';
+import '../../../core/providers/currency_provider.dart';
 
 class MemberDashboard extends ConsumerWidget {
   final String memberId;
@@ -19,6 +20,7 @@ class MemberDashboard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final currency = ref.watch(currencyProvider).valueOrNull ?? '\$';
     final balance = ref.watch(memberBalanceProvider(memberId));
     final transactions = ref.watch(memberTransactionsProvider(memberId));
     final debtSummary = ref.watch(memberDebtSummaryProvider(memberId));
@@ -27,10 +29,10 @@ class MemberDashboard extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.all(16.0),
       children: [
-        _buildBalanceCard(context, balance),
+        _buildBalanceCard(context, balance, currency),
         const SizedBox(height: 16),
         if (debtSummary['debit']! > 0 || debtSummary['credit']! > 0) ...[
-          _buildDebtSummaryCard(context, debtSummary),
+          _buildDebtSummaryCard(context, debtSummary, currency),
           const SizedBox(height: 16),
         ],
 
@@ -50,7 +52,7 @@ class MemberDashboard extends ConsumerWidget {
                 Text('Active Debts (Pending)',
                     style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
-                ...pendingDebts.map((d) => _buildDebtTile(context, ref, d)),
+                ...pendingDebts.map((d) => _buildDebtTile(context, ref, d, currency)),
                 const SizedBox(height: 16),
               ],
             );
@@ -71,9 +73,9 @@ class MemberDashboard extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                          'Total: ${NumberFormat.simpleCurrency().format(a.totalAmount)}'),
+                          'Total: ${NumberFormat.currency(symbol: currency).format(a.totalAmount)}'),
                       Text(
-                          'Remaining: ${NumberFormat.simpleCurrency().format(a.remainingAmount)}'),
+                          'Remaining: ${NumberFormat.currency(symbol: currency).format(a.remainingAmount)}'),
                     ],
                   ),
                   onTap: () {
@@ -107,12 +109,12 @@ class MemberDashboard extends ConsumerWidget {
         const SizedBox(height: 8),
         ...transactions
             .take(10)
-            .map((t) => _buildTransactionTile(context, ref, t)),
+            .map((t) => _buildTransactionTile(context, ref, t, currency)),
       ],
     );
   }
 
-  Widget _buildBalanceCard(BuildContext context, Map<String, double> balance) {
+  Widget _buildBalanceCard(BuildContext context, Map<String, double> balance, String currency) {
     return Card(
       elevation: 4,
       child: Padding(
@@ -122,7 +124,7 @@ class MemberDashboard extends ConsumerWidget {
             Text('Current Balance',
                 style: Theme.of(context).textTheme.titleMedium),
             Text(
-              NumberFormat.simpleCurrency().format(balance['balance']),
+              NumberFormat.currency(symbol: currency).format(balance['balance']),
               style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: (balance['balance'] ?? 0) >= 0
@@ -135,9 +137,9 @@ class MemberDashboard extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _buildSummaryItem(
-                    context, 'Income', balance['income']!, Colors.greenAccent),
+                    context, 'Income', balance['income']!, Colors.greenAccent, currency),
                 _buildSummaryItem(
-                    context, 'Expenses', balance['expense']!, Colors.redAccent),
+                    context, 'Expenses', balance['expense']!, Colors.redAccent, currency),
               ],
             ),
           ],
@@ -147,7 +149,7 @@ class MemberDashboard extends ConsumerWidget {
   }
 
   Widget _buildDebtSummaryCard(
-      BuildContext context, Map<String, double> debt) {
+      BuildContext context, Map<String, double> debt, String currency) {
     return Card(
       color: Colors.blueGrey.withOpacity(0.2),
       child: Padding(
@@ -156,9 +158,9 @@ class MemberDashboard extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _buildSummaryItem(
-                context, 'I Gave (Debit)', debt['debit']!, Colors.orangeAccent),
+                context, 'I Gave (Debit)', debt['debit']!, Colors.orangeAccent, currency),
             _buildSummaryItem(context, 'I Took (Credit)', debt['credit']!,
-                Colors.purpleAccent),
+                Colors.purpleAccent, currency),
           ],
         ),
       ),
@@ -166,19 +168,19 @@ class MemberDashboard extends ConsumerWidget {
   }
 
   Widget _buildSummaryItem(
-      BuildContext context, String label, double amount, Color color) {
+      BuildContext context, String label, double amount, Color color, String currency) {
     return Column(
       children: [
         Text(label, style: const TextStyle(color: Colors.grey)),
         Text(
-          NumberFormat.simpleCurrency().format(amount),
+          NumberFormat.currency(symbol: currency).format(amount),
           style: Theme.of(context).textTheme.titleLarge?.copyWith(color: color),
         ),
       ],
     );
   }
 
-  Widget _buildDebtTile(BuildContext context, WidgetRef ref, Debt debt) {
+  Widget _buildDebtTile(BuildContext context, WidgetRef ref, Debt debt, String currency) {
     final isDebit = debt.type == DebtType.debit;
     return Dismissible(
       key: ValueKey(debt.id),
@@ -217,7 +219,7 @@ class MemberDashboard extends ConsumerWidget {
           ),
           title: Text(debt.personName),
           subtitle: Text(
-              "Rem: ${NumberFormat.simpleCurrency().format(debt.remainingAmount)} / Total: ${NumberFormat.simpleCurrency().format(debt.amount)}"),
+              "Rem: ${NumberFormat.currency(symbol: currency).format(debt.remainingAmount)} / Total: ${NumberFormat.currency(symbol: currency).format(debt.amount)}"),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             Navigator.push(
@@ -231,7 +233,7 @@ class MemberDashboard extends ConsumerWidget {
   }
 
   Widget _buildTransactionTile(
-      BuildContext context, WidgetRef ref, TransactionModel transaction) {
+      BuildContext context, WidgetRef ref, TransactionModel transaction, String currency) {
     final isExpense = transaction.type == CategoryType.expense;
     return Dismissible(
       key: ValueKey(transaction.id),
@@ -267,7 +269,7 @@ class MemberDashboard extends ConsumerWidget {
             isExpense ? Icons.arrow_downward : Icons.arrow_upward,
             color: isExpense ? Colors.redAccent : Colors.greenAccent,
           ),
-          title: Text(NumberFormat.simpleCurrency().format(transaction.amount)),
+          title: Text(NumberFormat.currency(symbol: currency).format(transaction.amount)),
           subtitle: Text(DateFormat.yMMMd().format(transaction.date)),
           trailing: transaction.note.isNotEmpty
               ? const Icon(Icons.note, size: 16)

@@ -6,6 +6,7 @@ import '../../core/providers/allowance_provider.dart';
 import '../../core/providers/category_provider.dart';
 import '../../core/utils/summary_card.dart';
 import 'allowance_expense_dialog.dart';
+import '../../core/providers/currency_provider.dart';
 
 class AllowanceDetailsPage extends ConsumerWidget {
   final Allowance allowance;
@@ -14,6 +15,7 @@ class AllowanceDetailsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final currency = ref.watch(currencyProvider).valueOrNull ?? '\$';
     final allowancesList = ref.watch(allowancesProvider).asData?.value ?? [];
     final currentAllowance = allowancesList.firstWhere(
       (a) => a.id == allowance.id,
@@ -54,8 +56,8 @@ class AllowanceDetailsPage extends ConsumerWidget {
               padding: const EdgeInsets.all(16.0),
               child: SummaryCard(
                 title: 'Remaining Balance',
-                amount: NumberFormat.simpleCurrency().format(currentAllowance.remainingAmount),
-                subtitle: 'of ${NumberFormat.simpleCurrency().format(currentAllowance.totalAmount)} total allowance',
+                amount: NumberFormat.currency(symbol: currency).format(currentAllowance.remainingAmount),
+                subtitle: 'of ${NumberFormat.currency(symbol: currency).format(currentAllowance.totalAmount)} total allowance',
                 progress: progress,
                 icon: Icons.account_balance_wallet,
                 backgroundColor: const Color(0xFF1E1E1E),
@@ -134,7 +136,7 @@ class AllowanceDetailsPage extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              NumberFormat.simpleCurrency().format(expense.amount),
+                              NumberFormat.currency(symbol: currency).format(expense.amount),
                               style: theme.textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: theme.colorScheme.error,
