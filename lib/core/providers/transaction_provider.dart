@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import '../models/transaction_model.dart';
 import '../models/category.dart';
 import 'database_provider.dart';
+import 'date_range_provider.dart';
 
 final transactionsProvider = AsyncNotifierProvider<TransactionsNotifier, List<TransactionModel>>(() {
   return TransactionsNotifier();
@@ -74,15 +75,30 @@ class TransactionsNotifier extends AsyncNotifier<List<TransactionModel>> {
   }
 }
 
-// Derived provider for filtered transactions by member
-final memberTransactionsProvider = Provider.family<List<TransactionModel>, String>((ref, memberId) {
+// Derived provider for filtered transactions by member and date range
+final filteredTransactionsProvider = Provider.family<List<TransactionModel>, String>((ref, memberId) {
   final transactions = ref.watch(transactionsProvider).asData?.value ?? [];
-  return transactions.where((t) => t.memberId == memberId).toList();
+  final dateRange = ref.watch(currentDateRangeProvider);
+  
+  return transactions.where((t) {
+    if (t.memberId != memberId) return false;
+    // Check if date is within range [start, end)
+    // Actually, let's use inclusive start and exclusive end logic, or inclusive both?
+    // Start 5th, End 5th of next month.
+    // Usually: start <= date < end
+    return t.date.isAfter(dateRange.start.subtract(const Duration(seconds: 1))) && 
+           t.date.isBefore(dateRange.end);
+  }).toList();
+});
+
+// Original provider kept for compatibility if needed, but we should use filtered one
+final memberTransactionsProvider = Provider.family<List<TransactionModel>, String>((ref, memberId) {
+     return ref.watch(filteredTransactionsProvider(memberId));
 });
 
 // Derived providers for totals
 final memberBalanceProvider = Provider.family<Map<String, double>, String>((ref, memberId) {
-  final transactions = ref.watch(memberTransactionsProvider(memberId));
+  final transactions = ref.watch(filteredTransactionsProvider(memberId));
   double income = 0;
   double expense = 0;
   for (var t in transactions) {

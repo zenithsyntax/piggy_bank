@@ -38,7 +38,20 @@ class FamilyMembersNotifier extends AsyncNotifier<List<FamilyMember>> {
     try {
       final db = await ref.read(databaseProvider.future);
       final maps = await db.query('family_members', orderBy: 'created_at ASC');
-      final members = maps.map((e) => FamilyMember.fromMap(e)).toList();
+      var members = maps.map((e) => FamilyMember.fromMap(e)).toList();
+      
+      if (members.isEmpty) {
+          // Auto-create default member
+          final defaultMember = FamilyMember(
+            id: const Uuid().v4(),
+            name: 'Me',
+            createdAt: DateTime.now(),
+            resetDay: 1,
+          );
+          await db.insert('family_members', defaultMember.toMap());
+          members = [defaultMember];
+      }
+
       state = AsyncValue.data(members);
       return members;
     } catch (e, stack) {
@@ -47,13 +60,14 @@ class FamilyMembersNotifier extends AsyncNotifier<List<FamilyMember>> {
     }
   }
 
-  Future<void> addMember(String name) async {
+  Future<void> addMember(String name, {int resetDay = 1}) async {
     try {
       final db = await ref.read(databaseProvider.future);
       final newMember = FamilyMember(
         id: const Uuid().v4(),
         name: name,
         createdAt: DateTime.now(),
+        resetDay: resetDay,
       );
       await db.insert('family_members', newMember.toMap());
       // Reload to ensure sync

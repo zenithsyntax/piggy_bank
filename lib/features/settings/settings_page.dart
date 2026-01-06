@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers/family_member_provider.dart';
 import '../../core/providers/category_provider.dart';
+import '../../core/models/family_member.dart';
 import '../../core/models/category.dart';
+import 'widgets/member_settings_dialog.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -23,13 +25,23 @@ class SettingsPage extends ConsumerWidget {
                 ...members.map((member) => ListTile(
                       leading: const CircleAvatar(child: Icon(Icons.person)),
                       title: Text(member.name),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.redAccent),
-                        onPressed: () => _confirmDelete(
-                          context, 
-                          'Delete ${member.name}?', 
-                          () => ref.read(familyMembersProvider.notifier).deleteMember(member.id),
-                        ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.blueAccent),
+                            onPressed: () => _showEditMemberDialog(context, member),
+                          ),
+                          if (member.name != 'Me')
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.redAccent),
+                              onPressed: () => _confirmDelete(
+                                context, 
+                                'Delete ${member.name}?', 
+                                () => ref.read(familyMembersProvider.notifier).deleteMember(member.id),
+                              ),
+                            ),
+                        ],
                       ),
                     )),
                 ListTile(
@@ -115,29 +127,16 @@ class SettingsPage extends ConsumerWidget {
   }
 
   void _showAddMemberDialog(BuildContext context, WidgetRef ref) {
-    final controller = TextEditingController();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Member'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(labelText: 'Name'),
-          textCapitalization: TextCapitalization.sentences,
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              if (controller.text.isNotEmpty) {
-                ref.read(familyMembersProvider.notifier).addMember(controller.text.trim());
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Add'),
-          ),
-        ],
-      ),
+      builder: (context) => const MemberSettingsDialog(),
+    );
+  }
+
+  void _showEditMemberDialog(BuildContext context, FamilyMember member) {
+    showDialog(
+      context: context,
+      builder: (context) => MemberSettingsDialog(member: member),
     );
   }
 

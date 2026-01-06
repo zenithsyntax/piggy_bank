@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import '../../core/models/debt.dart';
 import '../../core/providers/debt_provider.dart';
 import 'debt_repayment_dialog.dart';
-import 'debt_dialog.dart';
+import 'add_debt_page.dart';
 
 class DebtDetailsPage extends ConsumerWidget {
   final Debt debt;
@@ -183,13 +183,14 @@ class DebtDetailsPage extends ConsumerWidget {
   }
   
   void _showEditDialog(BuildContext context, WidgetRef ref, Debt debt) {
-      // For now we can just show the DebtDialog in "Edit" mode.
-      // But DebtDialog currently doesn't support editing. 
-      // We will need to update DebtDialog to accept an optional 'debt' argument.
-      // For now, let's just use the DebtDialog import and fix it in the next step.
-      showDialog(
-          context: context,
-          builder: (c) => DebtDialog(initialMemberId: debt.memberId, debtToEdit: debt),
+      Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AddDebtPage(
+              initialMemberId: debt.memberId,
+              debtToEdit: debt,
+            ),
+          ),
       );
   }
 }

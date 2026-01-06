@@ -5,6 +5,7 @@ import '../models/transaction_model.dart';
 import '../models/category.dart';
 import 'database_provider.dart';
 import 'transaction_provider.dart';
+import 'date_range_provider.dart';
 
 final debtsProvider = AsyncNotifierProvider<DebtsNotifier, List<Debt>>(() {
   return DebtsNotifier();
@@ -160,7 +161,11 @@ class DebtsNotifier extends AsyncNotifier<List<Debt>> {
       final maps = await db.query('debts', where: 'id = ?', whereArgs: [id]);
       if (maps.isNotEmpty) {
           final debt = Debt.fromMap(maps.first);
-          final updated = debt.copyWith(status: DebtStatus.settled, remainingAmount: 0);
+          final updated = debt.copyWith(
+            status: DebtStatus.settled,
+            remainingAmount: 0,
+            completedAt: DateTime.now(),
+          );
           await db.update('debts', updated.toMap(), where: 'id = ?', whereArgs: [id]);
           await loadDebts();
       }
@@ -235,11 +240,14 @@ class DebtsNotifier extends AsyncNotifier<List<Debt>> {
           
           // 2. Update Debt Remaining Amount
           final newRemaining = debt.remainingAmount - amount;
-          final newStatus = newRemaining <= 0 ? DebtStatus.settled : DebtStatus.pending;
+          final isSettled = newRemaining <= 0;
+          final newStatus = isSettled ? DebtStatus.settled : DebtStatus.pending;
+          final completedAt = isSettled ? date : null; // Use repayment date as completion date
           
           final updatedDebt = debt.copyWith(
               remainingAmount: newRemaining < 0 ? 0 : newRemaining,
-              status: newStatus
+              status: newStatus,
+              completedAt: completedAt,
           );
           await txn.update('debts', updatedDebt.toMap(), where: 'id = ?', whereArgs: [debtId]);
       });
@@ -285,8 +293,9 @@ class DebtsNotifier extends AsyncNotifier<List<Debt>> {
            final newStatus = DebtStatus.pending; // Revert to pending if it was settled
            
             final updatedDebt = debt.copyWith(
-              remainingAmount: newRemaining > debt.amount ? debt.amount : newRemaining, // Cap at total amount? Or allow over? usually cap at total.
-              status: newStatus
+              remainingAmount: newRemaining > debt.amount ? debt.amount : newRemaining, 
+              status: newStatus,
+              completedAt: null, // Clear completion date since it's pending again
           );
           await txn.update('debts', updatedDebt.toMap(), where: 'id = ?', whereArgs: [debtId]);
        });
@@ -298,9 +307,47 @@ class DebtsNotifier extends AsyncNotifier<List<Debt>> {
   }
 }
 
-final memberDebtsProvider = Provider.family<List<Debt>, String>((ref, memberId) {
+final filteredDebtsProvider = Provider.family<List<Debt>, String>((ref, memberId) {
     final debts = ref.watch(debtsProvider).asData?.value ?? [];
-    return debts.where((d) => d.memberId == memberId).toList();
+    final dateRange = ref.watch(currentDateRangeProvider);
+    final monthOffset = ref.watch(monthOffsetProvider);
+    
+    return debts.where((d) {
+        if (d.memberId != memberId) return false;
+        
+        // Logic:
+        // 1. If currently in "Current View" (offset == 0):
+        //    Show ALL Pending Debts (Ongoing)
+        //    OR Settled Debts that were completed within this month's range.
+        
+        // 2. If in "History View" (offset != 0):
+        //    Show ONLY Settled Debts that were completed within that month's range.
+        //    (Pending debts always "live" in the current view)
+        
+        if (monthOffset == 0) {
+            // Current Month
+            if (d.status == DebtStatus.pending) return true;
+            
+            // Settled in this period?
+            if (d.completedAt != null) {
+                 return d.completedAt!.isAfter(dateRange.start.subtract(const Duration(seconds: 1))) && 
+                        d.completedAt!.isBefore(dateRange.end);
+            }
+            return false;
+        } else {
+             // Past/Future Month
+             // Only show settled debts from this period
+              if (d.status == DebtStatus.settled && d.completedAt != null) {
+                 return d.completedAt!.isAfter(dateRange.start.subtract(const Duration(seconds: 1))) && 
+                        d.completedAt!.isBefore(dateRange.end);
+            }
+            return false;
+        }
+    }).toList();
+});
+
+final memberDebtsProvider = Provider.family<List<Debt>, String>((ref, memberId) {
+    return ref.watch(filteredDebtsProvider(memberId));
 });
 
 final memberDebtSummaryProvider = Provider.family<Map<String, double>, String>((ref, memberId) {

@@ -22,7 +22,7 @@ class DatabaseHelper {
     final path = join(documentsDirectory.path, 'piggy_bank.db');
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -47,6 +47,14 @@ class DatabaseHelper {
         )
       ''');
     }
+    
+    if (oldVersion < 3) {
+      // Add reset_day to family_members with default 1
+      await db.execute('ALTER TABLE family_members ADD COLUMN reset_day INTEGER DEFAULT 1');
+      
+      // Add completed_at to debts
+      await db.execute('ALTER TABLE debts ADD COLUMN completed_at TEXT');
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -55,7 +63,8 @@ class DatabaseHelper {
       CREATE TABLE family_members (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
-        created_at TEXT NOT NULL
+        created_at TEXT NOT NULL,
+        reset_day INTEGER DEFAULT 1
       )
     ''');
 
@@ -95,6 +104,7 @@ class DatabaseHelper {
         status TEXT NOT NULL,
         date TEXT NOT NULL,
         note TEXT,
+        completed_at TEXT,
         FOREIGN KEY (member_id) REFERENCES family_members (id) ON DELETE CASCADE
       )
     ''');
@@ -153,6 +163,7 @@ class DatabaseHelper {
       'id': memberId,
       'name': 'Me',
       'created_at': DateTime.now().toIso8601String(),
+      'reset_day': 1,
     });
 
     // Seed Categories

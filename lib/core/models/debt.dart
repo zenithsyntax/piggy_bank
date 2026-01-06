@@ -13,6 +13,7 @@ class Debt extends Equatable {
   final DebtStatus status;
   final DateTime date;
   final String note;
+  final DateTime? completedAt;
 
   const Debt({
     required this.id,
@@ -24,6 +25,7 @@ class Debt extends Equatable {
     required this.status,
     required this.date,
     this.note = '',
+    this.completedAt,
   });
 
   Map<String, dynamic> toMap() {
@@ -37,6 +39,7 @@ class Debt extends Equatable {
       'status': status.name,
       'date': date.toIso8601String(),
       'note': note,
+      'completed_at': completedAt?.toIso8601String(),
     };
   }
 
@@ -51,6 +54,7 @@ class Debt extends Equatable {
       status: DebtStatus.values.byName(map['status']),
       date: DateTime.parse(map['date']),
       note: map['note'] ?? '',
+      completedAt: map['completed_at'] != null ? DateTime.parse(map['completed_at']) : null,
     );
   }
 
@@ -64,6 +68,7 @@ class Debt extends Equatable {
     DebtStatus? status,
     DateTime? date,
     String? note,
+    DateTime? completedAt,
   }) {
     return Debt(
       id: id ?? this.id,
@@ -75,11 +80,12 @@ class Debt extends Equatable {
       status: status ?? this.status,
       date: date ?? this.date,
       note: note ?? this.note,
+      completedAt: completedAt ?? this.completedAt,
     );
   }
 
   @override
-  List<Object?> get props => [id, memberId, personName, amount, remainingAmount, type, status, date, note];
+  List<Object?> get props => [id, memberId, personName, amount, remainingAmount, type, status, date, note, completedAt];
 }
 
 class DebtRepayment extends Equatable {
