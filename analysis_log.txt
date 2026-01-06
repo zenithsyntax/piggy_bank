@@ -1,0 +1,24 @@
+﻿Analyzing piggy_bank...                                         
+
+   info - The imported package 'path' isn't a dependency of the importing package - lib\core\database\database_helper.dart:2:8 - depend_on_referenced_packages
+   info - Don't invoke 'print' in production code - lib\core\providers\allowance_provider.dart:112:7 - avoid_print
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\utils\gradient_summary_card.dart:31:26 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\utils\gradient_summary_card.dart:32:26 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\utils\gradient_summary_card.dart:40:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\allowances\allowance_details_page.dart:111:64 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\allowances\allowance_details_page.dart:118:60 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\allowances\allowance_dialog.dart:46:25 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\allowances\allowance_expense_dialog.dart:68:21 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\widgets\member_dashboard.dart:301:48 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\widgets\member_dashboard.dart:308:28 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\widgets\member_dashboard.dart:350:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\widgets\member_dashboard.dart:396:50 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\widgets\member_dashboard.dart:403:34 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\widgets\member_dashboard.dart:469:55 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\widgets\member_dashboard.dart:478:46 - deprecated_member_use
+  error - The getter 'frequency' isn't defined for the type 'Allowance' - lib\features\home\widgets\member_dashboard.dart:490:39 - undefined_getter
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\widgets\member_dashboard.dart:583:32 - deprecated_member_use
+  error - The getter 'categoryName' isn't defined for the type 'TransactionModel' - lib\features\home\widgets\member_dashboard.dart:598:35 - undefined_getter
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\transactions\transaction_dialog.dart:105:21 - deprecated_member_use
+   info - 'background' is deprecated and shouldn't be used. Use surface instead. This feature was deprecated after v3.18.0-0.1.pre - lib\theme\app_theme.dart:26:7 - deprecated_member_use
+

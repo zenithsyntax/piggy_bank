@@ -7,6 +7,7 @@ import 'widgets/member_dashboard.dart';
 import '../transactions/transaction_dialog.dart';
 import '../debts/debt_dialog.dart';
 import '../allowances/allowance_dialog.dart';
+import '../settings/settings_page.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -15,8 +16,8 @@ class HomePage extends ConsumerStatefulWidget {
   ConsumerState<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMixin {
-  TabController? _tabController;
+class _HomePageState extends ConsumerState<HomePage> {
+  int _selectedIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -26,37 +27,49 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
       data: (members) {
         if (members.isEmpty) {
           return Scaffold(
-            appBar: AppBar(title: const Text('Piggy Bank')),
-            body: const Center(child: Text('No family members found. Go to Settings to add one.')),
+            appBar: _buildAppBar(context),
+            body: const Center(
+                child: Text('No family members found. Go to Settings to add one.')),
           );
         }
 
-        // Initialize or update tab controller
-        if (_tabController == null || _tabController!.length != members.length) {
-            _tabController?.dispose();
-            _tabController = TabController(length: members.length, vsync: this);
-            _tabController!.addListener(_handleTabSelection);
-             // Sync selected member provider
-             Future.microtask(() {
-                 if(members.isNotEmpty) {
-                    ref.read(selectedMemberProvider.notifier).setSelected(members[_tabController!.index].id);
-                 }
-             });
+        // Ensure selected index is valid
+        if (_selectedIndex >= members.length) {
+          _selectedIndex = 0;
         }
-        
+
+        // Sync selected member provider
+        Future.microtask(() {
+          ref
+              .read(selectedMemberProvider.notifier)
+              .setSelected(members[_selectedIndex].id);
+        });
+
+        final currentMember = members[_selectedIndex];
+
         return Scaffold(
-          appBar: AppBar(
-            title: const Text('Piggy Bank'),
-            bottom: TabBar(
-              controller: _tabController,
-              isScrollable: true,
-              tabs: members.map((m) => Tab(text: m.name)).toList(),
-            ),
+          appBar: _buildAppBar(context),
+          body: MemberDashboard(
+            key: ValueKey(currentMember.id), // Force rebuild on member change
+            memberId: currentMember.id,
           ),
-          body: TabBarView(
-            controller: _tabController,
-            children: members.map((m) => MemberDashboard(memberId: m.id)).toList(),
-          ),
+          bottomNavigationBar: members.length >= 2 
+            ? NavigationBar(
+                selectedIndex: _selectedIndex,
+                onDestinationSelected: (index) {
+                  setState(() {
+                    _selectedIndex = index;
+                  });
+                },
+                destinations: members.map((m) {
+                  return NavigationDestination(
+                    icon: const Icon(Icons.person_outline),
+                    selectedIcon: const Icon(Icons.person),
+                    label: m.name,
+                  );
+                }).toList(),
+              )
+            : null,
           floatingActionButtonLocation: ExpandableFab.location,
           floatingActionButton: ExpandableFab(
             type: ExpandableFabType.up,
@@ -71,7 +84,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
                 tooltip: 'Transaction',
                 child: const Icon(Icons.attach_money),
                 onPressed: () {
-                   _showTransactionDialog(context, members[_tabController!.index]);
+                  _showTransactionDialog(context, currentMember);
                 },
               ),
               FloatingActionButton(
@@ -79,7 +92,7 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
                 tooltip: 'Debt/Credit',
                 child: const Icon(Icons.handshake),
                 onPressed: () {
-                    _showDebtDialog(context, members[_tabController!.index]);
+                  _showDebtDialog(context, currentMember);
                 },
               ),
               FloatingActionButton(
@@ -87,36 +100,55 @@ class _HomePageState extends ConsumerState<HomePage> with TickerProviderStateMix
                 tooltip: 'Allowance',
                 child: const Icon(Icons.card_giftcard),
                 onPressed: () {
-                    _showAllowanceDialog(context, members[_tabController!.index]);
+                  _showAllowanceDialog(context, currentMember);
                 },
               ),
             ],
           ),
         );
       },
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, s) => Scaffold(body: Center(child: Text('Error: $e'))),
     );
   }
-  
-  void _handleTabSelection() {
-      if (_tabController!.indexIsChanging) {
-          final members = ref.read(familyMembersProvider).asData?.value;
-          if (members != null && members.isNotEmpty) {
-               ref.read(selectedMemberProvider.notifier).setSelected(members[_tabController!.index].id);
-          }
-      }
+
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
+    return AppBar(
+      leading: const Padding(
+        padding: EdgeInsets.all(8.0),
+        child: Icon(Icons.savings, size: 32), // App Logo (Icon)
+      ),
+      title: const Text('Piggy Bank'),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.settings),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const SettingsPage()),
+            );
+          },
+        ),
+      ],
+    );
   }
 
   void _showTransactionDialog(BuildContext context, FamilyMember member) {
-    showDialog(context: context, builder: (c) => TransactionDialog(initialMemberId: member.id));
+    showDialog(
+        context: context,
+        builder: (c) => TransactionDialog(initialMemberId: member.id));
   }
-  
+
   void _showDebtDialog(BuildContext context, FamilyMember member) {
-      showDialog(context: context, builder: (c) => DebtDialog(initialMemberId: member.id));
+    showDialog(
+        context: context,
+        builder: (c) => DebtDialog(initialMemberId: member.id));
   }
-  
-   void _showAllowanceDialog(BuildContext context, FamilyMember member) {
-      showDialog(context: context, builder: (c) => AllowanceDialog(initialMemberId: member.id));
+
+  void _showAllowanceDialog(BuildContext context, FamilyMember member) {
+    showDialog(
+        context: context,
+        builder: (c) => AllowanceDialog(initialMemberId: member.id));
   }
 }

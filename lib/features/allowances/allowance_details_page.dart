@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import '../../core/models/allowance.dart';
 import '../../core/providers/allowance_provider.dart';
 import '../../core/providers/category_provider.dart';
-import '../../core/utils/gradient_summary_card.dart';
+import '../../core/utils/summary_card.dart';
 import 'allowance_expense_dialog.dart';
 
 class AllowanceDetailsPage extends ConsumerWidget {
@@ -52,12 +52,13 @@ class AllowanceDetailsPage extends ConsumerWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
-              child: GradientSummaryCard(
+              child: SummaryCard(
                 title: 'Remaining Balance',
                 amount: NumberFormat.simpleCurrency().format(currentAllowance.remainingAmount),
                 subtitle: 'of ${NumberFormat.simpleCurrency().format(currentAllowance.totalAmount)} total allowance',
                 progress: progress,
                 icon: Icons.account_balance_wallet,
+                backgroundColor: const Color(0xFF1E1E1E),
                 color: theme.colorScheme.primary, // Uses the new indigo
               ),
             ),

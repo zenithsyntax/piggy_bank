@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 
-class GradientSummaryCard extends StatelessWidget {
+class SummaryCard extends StatelessWidget {
   final String title;
   final String amount;
   final String subtitle;
   final double? progress;
   final IconData? icon;
   final Color? color;
+  final Color? backgroundColor;
 
-  const GradientSummaryCard({
+  const SummaryCard({
     super.key,
     required this.title,
     required this.amount,
@@ -16,30 +17,36 @@ class GradientSummaryCard extends StatelessWidget {
     this.progress,
     this.icon,
     this.color,
+    this.backgroundColor,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final primaryColor = color ?? theme.colorScheme.primary;
+    // Use provided color or primary, but as a solid background or accent
+    // For a "plain" look, we might want a dark surface with colored text/icon,
+    // OR a solid colored card.
+    // Given the previous design was a gradient card (likely colorful),
+    // a solid colored card is the direct "plain" equivalent.
+    
+    final cardColor = backgroundColor ?? color ?? theme.colorScheme.surface;
+    final onCardColor = (cardColor.computeLuminance() > 0.5) ? Colors.black : Colors.white;
+    final contentColor = color != null && backgroundColor == null ? onCardColor : (color ?? onCardColor);
 
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            primaryColor.withOpacity(0.8),
-            primaryColor.withOpacity(0.4),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: cardColor,
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+             color: Colors.white.withAlpha(13), // Subtle border for definition
+             width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+            color: Colors.black.withAlpha(50),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -53,20 +60,20 @@ class GradientSummaryCard extends StatelessWidget {
               Text(
                 title.toUpperCase(),
                 style: theme.textTheme.labelMedium?.copyWith(
-                  color: Colors.white70,
+                  color: contentColor.withOpacity(0.7),
                   letterSpacing: 1.2,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               if (icon != null)
-                Icon(icon, color: Colors.white70, size: 20),
+                Icon(icon, color: contentColor.withOpacity(0.7), size: 20),
             ],
           ),
           const SizedBox(height: 12),
           Text(
             amount,
             style: theme.textTheme.displaySmall?.copyWith(
-              color: Colors.white,
+              color: contentColor,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -74,7 +81,7 @@ class GradientSummaryCard extends StatelessWidget {
           Text(
             subtitle,
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: Colors.white70,
+              color: contentColor.withOpacity(0.7),
             ),
           ),
           if (progress != null) ...[
@@ -84,7 +91,7 @@ class GradientSummaryCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: progress,
                 backgroundColor: Colors.black26,
-                color: Colors.white,
+                color: contentColor,
                 minHeight: 8,
               ),
             ),

@@ -4,6 +4,7 @@ import '../models/debt.dart';
 import '../models/transaction_model.dart';
 import '../models/category.dart';
 import 'database_provider.dart';
+import 'transaction_provider.dart';
 
 final debtsProvider = AsyncNotifierProvider<DebtsNotifier, List<Debt>>(() {
   return DebtsNotifier();
@@ -93,6 +94,8 @@ class DebtsNotifier extends AsyncNotifier<List<Debt>> {
       });
 
       await loadDebts();
+      // Invalidate transactions provider to update balance
+      ref.invalidate(transactionsProvider);
     } catch (e) {
       // Handle error
     }
@@ -103,6 +106,8 @@ class DebtsNotifier extends AsyncNotifier<List<Debt>> {
           final db = await ref.read(databaseProvider.future);
           await db.update('debts', debt.toMap(), where: 'id = ?', whereArgs: [debt.id]);
           await loadDebts();
+          // Invalidate transactions provider to update balance
+          ref.invalidate(transactionsProvider);
       } catch (e) {
           // Handle Error
       }
@@ -111,8 +116,38 @@ class DebtsNotifier extends AsyncNotifier<List<Debt>> {
   Future<void> deleteDebt(String id) async {
        try {
           final db = await ref.read(databaseProvider.future);
+          
+          // Get debt info before deleting to find associated transaction
+          final debtMaps = await db.query('debts', where: 'id = ?', whereArgs: [id]);
+          if (debtMaps.isEmpty) return;
+          
+          final debt = Debt.fromMap(debtMaps.first);
+          
+          // Delete associated transaction (created when debt was added)
+          // Transaction note format: "Debt: $personName - $note"
+          await db.delete(
+            'transactions',
+            where: 'note LIKE ? AND member_id = ?',
+            whereArgs: ['Debt: ${debt.personName}%', debt.memberId],
+          );
+          
+          // Also delete any repayment transactions
+          // Repayment transaction note format: "Repayment: $personName"
+          await db.delete(
+            'transactions',
+            where: 'note LIKE ? AND member_id = ?',
+            whereArgs: ['Repayment: ${debt.personName}%', debt.memberId],
+          );
+          
+          // Delete debt repayments
+          await db.delete('debt_repayments', where: 'debt_id = ?', whereArgs: [id]);
+          
+          // Delete the debt
           await db.delete('debts', where: 'id = ?', whereArgs: [id]);
+          
           await loadDebts();
+          // Invalidate transactions provider to update balance
+          ref.invalidate(transactionsProvider);
       } catch (e) {
           // Handle Error
       }
@@ -212,6 +247,8 @@ class DebtsNotifier extends AsyncNotifier<List<Debt>> {
       // Reload debts to update UI
       ref.invalidate(debtRepaymentsProvider(debtId));
       await loadDebts();
+      // Invalidate transactions provider to update balance
+      ref.invalidate(transactionsProvider);
   }
   
   Future<void> deleteRepayment(String repaymentId, String debtId, double amount) async {
@@ -221,7 +258,26 @@ class DebtsNotifier extends AsyncNotifier<List<Debt>> {
        if (debtIndex == -1) return;
        final debt = debts[debtIndex];
        
+       // Get repayment info before deleting
+       final repaymentMaps = await db.query('debt_repayments', where: 'id = ?', whereArgs: [repaymentId]);
+       if (repaymentMaps.isEmpty) return;
+       final repayment = DebtRepayment.fromMap(repaymentMaps.first);
+       
        await db.transaction((txn) async {
+           // Delete the repayment transaction
+           // Transaction note format: "Repayment: $personName"
+           await txn.delete(
+             'transactions',
+             where: 'note = ? AND member_id = ? AND amount = ? AND date = ?',
+             whereArgs: [
+               'Repayment: ${debt.personName}',
+               debt.memberId,
+               repayment.amount,
+               repayment.date.toIso8601String(),
+             ],
+           );
+           
+           // Delete the repayment
            await txn.delete('debt_repayments', where: 'id = ?', whereArgs: [repaymentId]);
            
            // Restore amount to debt
@@ -237,6 +293,8 @@ class DebtsNotifier extends AsyncNotifier<List<Debt>> {
        
        ref.invalidate(debtRepaymentsProvider(debtId));
        await loadDebts();
+       // Invalidate transactions provider to update balance
+       ref.invalidate(transactionsProvider);
   }
 }
 
