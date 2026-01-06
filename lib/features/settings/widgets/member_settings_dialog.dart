@@ -53,7 +53,11 @@ class _MemberSettingsDialogState extends ConsumerState<MemberSettingsDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(widget.member == null ? 'Add Member' : 'Edit Member'),
+      backgroundColor: const Color(0xFF1E1E1E),
+      title: Text(
+        widget.member == null ? 'Add Member' : 'Edit Member',
+        style: const TextStyle(color: Colors.white),
+      ),
       content: Form(
         key: _formKey,
         child: Column(
@@ -61,9 +65,24 @@ class _MemberSettingsDialogState extends ConsumerState<MemberSettingsDialog> {
           children: [
             TextFormField(
               controller: _nameController,
-              decoration: const InputDecoration(
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
                 labelText: 'Name',
                 hintText: 'Enter name',
+                labelStyle: const TextStyle(color: Colors.white70),
+                hintStyle: const TextStyle(color: Colors.white30),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.blueAccent),
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.redAccent),
+                ),
               ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
@@ -75,9 +94,21 @@ class _MemberSettingsDialogState extends ConsumerState<MemberSettingsDialog> {
             const SizedBox(height: 16),
             DropdownButtonFormField<int>(
               value: _resetDay,
-              decoration: const InputDecoration(
+              dropdownColor: const Color(0xFF2C2C2C),
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
                 labelText: 'Monthly Reset Day',
                 helperText: 'Day of the month when finances reset',
+                labelStyle: const TextStyle(color: Colors.white70),
+                helperStyle: const TextStyle(color: Colors.white30),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.blueAccent),
+                ),
               ),
               items: List.generate(31, (index) => index + 1).map((day) {
                 return DropdownMenuItem<int>(
@@ -102,6 +133,10 @@ class _MemberSettingsDialogState extends ConsumerState<MemberSettingsDialog> {
           child: const Text('Cancel'),
         ),
         ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blueAccent,
+            foregroundColor: Colors.white,
+          ),
           onPressed: _save,
           child: const Text('Save'),
         ),
